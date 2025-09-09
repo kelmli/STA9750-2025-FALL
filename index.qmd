@@ -2,7 +2,7 @@
 title: "Kelly's R Projects"
 ---
 
-Welcome to my portfolio! This is a site where you can see all my R projects that I worked on for STA9750 - Software Tools for Data Analysis at Baruch College Zicklin School of Business.
+Welcome to my portfolio! This is a site where you can see all my R projects that I worked on for STA9750 Software Tools for Data Analysis at Baruch College Zicklin School of Business.
 
 ```{r}
 #| echo: false
