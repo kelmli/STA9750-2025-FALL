@@ -15,14 +15,14 @@ if(!require("leaflet")){
     stopifnot(require("leaflet"))
 }
 
-baruch_longitude <- -73.98333
-baruch_latitude  <- +40.75028
+baruch_longitude <- -75.9695
+baruch_latitude  <- +42.0894
 
 leaflet() |>
   addTiles() |>
   setView(baruch_longitude, baruch_latitude, zoom=17) |>
   addPopups(baruch_longitude, baruch_latitude, 
-            "I am a Master's student at <b>Baruch College</b>!")
+            "<b>Binghamton University</b> is where I went for my undergrad</b>!")
 ```
 
 ```{r}
