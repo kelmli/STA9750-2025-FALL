@@ -1,8 +1,15 @@
 ---
 title: "Kelly's R Projects"
+image: me.jpg
+about:
+  template: jolla
+  image-width: 10em
+  image-shape: round
 ---
 
-Welcome to my portfolio! This is a site where you can see all my R projects that I worked on for STA9750 Software Tools for Data Analysis at Baruch College Zicklin School of Business.
+Welcome to my portfolio. This is a site where you can see all my R projects that I worked on for STA9750 Software Tools for Data Analysis at Baruch College Zicklin School of Business.
+
+[Connect with me on LinkedIn](https://www.linkedin.com/in/kelly-l-4b41b61b9/)
 
 ```{r}
 #| echo: false
@@ -22,7 +29,7 @@ leaflet() |>
   addTiles() |>
   setView(baruch_longitude, baruch_latitude, zoom=17) |>
   addPopups(baruch_longitude, baruch_latitude, 
-            "<b>Binghamton University</b> is where I went for my undergrad</b>!")
+            "I completed my Bachelor's degree at <b>Binghamton University</b>!")
 ```
 
 ```{r}
