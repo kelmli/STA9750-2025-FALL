@@ -1,0 +1,171 @@
+---
+title: "Mini Project #1: Netflix"
+---
+
+# Netflix: Getting Stranger and Stronger
+
+### 1) Data Preparation
+
+```{r}
+if(!dir.exists(file.path("data", "mp01"))){
+    dir.create(file.path("data", "mp01"), showWarnings=FALSE, recursive=TRUE)
+}
+
+GLOBAL_TOP_10_FILENAME <- file.path("data", "mp01", "global_top10_alltime.csv")
+
+if(!file.exists(GLOBAL_TOP_10_FILENAME)){
+    download.file("https://www.netflix.com/tudum/top10/data/all-weeks-global.tsv", 
+                  destfile=GLOBAL_TOP_10_FILENAME)
+}
+
+COUNTRY_TOP_10_FILENAME <- file.path("data", "mp01", "country_top10_alltime.csv")
+
+if(!file.exists(COUNTRY_TOP_10_FILENAME)){
+    download.file("https://www.netflix.com/tudum/top10/data/all-weeks-countries.tsv", 
+                  destfile=COUNTRY_TOP_10_FILENAME)
+}
+```
+
+```{r}
+if(!require("tidyverse")) install.packages("tidyverse")
+library(readr)
+library(dplyr)
+
+GLOBAL_TOP_10 <- read_tsv(GLOBAL_TOP_10_FILENAME)
+```
+
+```{r}
+str(GLOBAL_TOP_10)
+```
+
+```{r}
+glimpse(GLOBAL_TOP_10)
+```
+
+### 2) Cleaning the Data
+
+```{r}
+GLOBAL_TOP_10 <- GLOBAL_TOP_10 |>
+    mutate(season_title = if_else(season_title=="N/A", NA , season_title))
+```
+
+```{r}
+COUNTRY_TOP_10 <- read_tsv(COUNTRY_TOP_10_FILENAME)
+
+COUNTRY_TOP_10 <- COUNTRY_TOP_10 |>
+  mutate(season_title = if_else(season_title=="N/A", NA, season_title))
+```
+
+#### 2a) DT Package for Global Top 10
+
+```{r}
+# install.packages("DT")
+library(DT)
+GLOBAL_TOP_10 |> 
+    head(n=20) |>
+    datatable(options=list(searching=FALSE, info=FALSE))
+```
+
+```{r}
+library(stringr)
+format_titles <- function(df){
+    colnames(df) <- str_replace_all(colnames(df), "_", " ") |> str_to_title()
+    df
+}
+
+GLOBAL_TOP_10 |> 
+    format_titles() |>
+    head(n=20) |>
+    datatable(options=list(searching=FALSE, info=FALSE)) |>
+    formatRound(c('Weekly Hours Viewed', 'Weekly Views'))
+```
+
+```{r}
+GLOBAL_TOP_10 |> 
+    select(-season_title) |>
+    format_titles() |>
+    head(n=20) |>
+    datatable(options=list(searching=FALSE, info=FALSE)) |>
+    formatRound(c('Weekly Hours Viewed', 'Weekly Views'))
+```
+
+```{r}
+GLOBAL_TOP_10 |> 
+    mutate(`runtime_(minutes)` = round(60 * runtime)) |>
+    select(-season_title, 
+           -runtime) |>
+    format_titles() |>
+    head(n=20) |>
+    datatable(options=list(searching=FALSE, info=FALSE)) |>
+    formatRound(c('Weekly Hours Viewed', 'Weekly Views'))
+
+```
+
+#### 2b) DT package for Country Top 10
+
+```{r}
+
+COUNTRY_TOP_10 |> 
+    format_titles() |>
+    head(n=20) |>
+    datatable(options=list(searching=FALSE, info=FALSE))
+```
+
+### 3) Exploratory Data Analysis (EDA)
+
+```{r}
+num_of_countries <- length(unique(COUNTRY_TOP_10$country_name))
+```
+
+1.  Netflix runs in `{r} num_of_countries` different countries.
+
+```{r}
+GLOBAL_TOP_10 |>
+  filter(GLOBAL_TOP_10$category == "Films (Non-English)") |>
+  slice_max(cumulative_weeks_in_top_10, n=1)
+```
+
+2.  "All Quiet on the Western Front" is the Non-English film with the most cumulative weeks in the Top 10. It was in the Top 10 for 23 cumulative weeks.
+
+```{r}
+
+longest_film <- GLOBAL_TOP_10 |> 
+  filter(GLOBAL_TOP_10$category %in% c("Films (Non-English)","Films (English)")) |>
+  mutate(runtime_minutes = round(60 * runtime)) |>
+  slice_max(runtime_minutes, n=1) |>
+  pull(show_title)
+
+longest_runtime_in_films <- GLOBAL_TOP_10 |> 
+  filter(GLOBAL_TOP_10$category %in% c("Films (Non-English)","Films (English)")) |>
+  mutate(runtime_minutes = round(60 * runtime)) |>
+  slice_max(runtime_minutes, n=1) |>
+  pull(runtime_minutes)
+
+
+
+```
+
+3.  The longest film out of the English and non-English films to have appeared in the Netflix Global Top 10 is the Non-English film called `{r} longest_film`, with a runtime of `{r} runtime_minutes` minutes.
+
+Note that Netflix does not provide runtime for programs before a certain date, so the answer here may be a bit limited.\*\*\*
+
+```{r}
+  most_hours_category <- GLOBAL_TOP_10 |>
+  group_by(category) |>
+  summarise(weekly_hours_viewed = sum(weekly_hours_viewed)) |>
+  slice_max(weekly_hours_viewed) |>
+  pull(category)
+
+```
+
+4.  Out of the 4 categories, `{r} most_hours_category` has the most total hours of global viewership.
+
+```{r}
+COUNTRY_TOP_10 |>
+  filter(category == "TV") |>
+  slice_max(cumulative_weeks_in_top_10, n=1)
+
+
+  
+```
+
