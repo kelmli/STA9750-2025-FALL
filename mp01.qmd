@@ -1,5 +1,7 @@
 ---
 title: "Mini Project #1: Netflix"
+author: "Kelly Li"
+date: "October 3, 2025"
 format:
   html:
     code-fold: true
@@ -7,6 +9,8 @@ format:
 ---
 
 # Netflix: Getting Stranger and Stronger
+
+This project explores Netflix’s global viewing trends through data analysis and visualization using R and its associated packages. By examining datasets on Netflix’s Top 10 films and TV shows across countries and time, we uncover patterns in viewership, content performance, and regional preferences. Using tools such as tidyverse and DT, we conduct exploratory data analysis (EDA) to highlight insights like the worldwide success of Stranger Things, the rapid rise of Netflix’s market in India, and the recent global phenomenon of KPop Demon Hunters. Through these analyses, we aim to understand how Netflix’s diverse catalog and international reach contribute to its sustained growth and cultural influence across markets.
 
 ### 1) Data Preparation
 
