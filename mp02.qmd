@@ -689,7 +689,7 @@ p1 |>
 
 #### Data Table for Rate Based Growth
 
-Top 5 Rate based growth
+Top 5 Rate Based growth
 
 ```{r}
 
@@ -714,6 +714,10 @@ p2 |>
 ```
 
 #### Adding in the Z-scores
+
+Negative z-score means that the housing growth is *below* average. 
+Positive z-score means that the housing growth is *above* average.
+Z score of 0 means that the housing growth is average.
 
 ```{r}
 
