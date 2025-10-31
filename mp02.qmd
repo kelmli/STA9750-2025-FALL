@@ -570,7 +570,7 @@ ggplot(t5, aes(x = year, y = avg_household_size, color = CBSA_name, group = CBSA
   ) +
   theme_minimal() +
   theme(
-    plot.title = element_text(face = "bold", size = 15),
+    plot.title = element_text(face = "bold"),
     plot.subtitle = element_text(size = 12, color = "gray40"),
     axis.title = element_text(face = "bold"),
     panel.grid.minor = element_blank(),
@@ -906,16 +906,16 @@ ggplot(income_rent, aes(x = year, y = rent_burden, color = CBSA, group = CBSA ))
     unhighlighted_params = list(color = "gray80", alpha = 0.3)
   ) +
   labs(
-    subtitle = "Punta Gorda and Philadelphia have noticeable differences in rent burden",
-    title = "Rent Burden for a YIMBY in Florida vs. a NIMBY in Pennsylvania (2009-2023)",
+    subtitle = "Punta Gorda and Philadelphia have noticeable differences in Rent Burden",
+    title = "Rent Burden for a YIMBY in FL vs. a NIMBY in PA (2009-2023)",
     x = "Year",
     y = "Average Household Size",
     color = "CBSA"
   ) +
   theme_minimal() +
   theme(
-    plot.title = element_text(face = "bold", size = 15),
-    plot.subtitle = element_text(size = 12, color = "gray40"),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(color = "gray40"),
     axis.title = element_text(face = "bold"),
     panel.grid.minor = element_blank(),
     panel.grid.major.x = element_blank(),
