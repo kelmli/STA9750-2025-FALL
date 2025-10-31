@@ -689,7 +689,7 @@ p1 |>
 
 #### Data Table for Rate Based Growth
 
-Top 5 Rate Based growth
+Top 5 Rate Based Growth
 
 ```{r}
 
