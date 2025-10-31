@@ -689,7 +689,7 @@ p1 |>
 
 #### Data Table for Rate Based Growth
 
-Top 5 Rate Based Growth
+Top 5 Rate Based Growth:
 
 ```{r}
 
@@ -704,7 +704,7 @@ p2 |>
     datatable(options=list(searching=FALSE, info=FALSE))
 ```
 
-Lowest 5 Rate Based Growth
+Lowest 5 Rate Based Growth:
 
 ```{r}
 p2 |>
@@ -894,8 +894,36 @@ fl_pa<-WAGES |>
   ungroup()
 
 # from this, we can see that in Punta Gorda (YIMBY) and Philadelphia (NIMBY), their employments are highest in service careers.
+  
+fl_pa <- c("39460", "37980")
+
+ggplot(income_rent, aes(x = year, y = rent_burden, color = CBSA, group = CBSA )) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 1.8) +
+  gghighlight(
+    CBSA %in% fl_pa,
+    label_key = NAME,
+    unhighlighted_params = list(color = "gray80", alpha = 0.3)
+  ) +
+  labs(
+    subtitle = "Punta Gorda and Philadelphia have noticeable differences in rent burden",
+    title = "Rent Burden for a YIMBY in Florida vs. a NIMBY in Pennsylvania (2009-2023)",
+    x = "Year",
+    y = "Average Household Size",
+    color = "CBSA"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 15),
+    plot.subtitle = element_text(size = 12, color = "gray40"),
+    axis.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = "none"  # focus on labels from gghighlight
+  )
 
 ```
+
 
 **Proposed Sponsors:** Representatives from Punta Gorda, Florida and Philadelphia, Pennsylvania
 
