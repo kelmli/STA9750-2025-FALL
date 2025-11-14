@@ -1,0 +1,376 @@
+---
+title: "Mini Project #3: Visualizing and Maintaining the Green Canopy of NYC"
+author: "Kelly Li"
+date: "November 14, 2025"
+format:
+  html:
+    code-fold: true
+    code-summary: "Click here to show the code"
+    toc: true
+    # toc-title: "On this page"
+    toc-location: right
+    toc-depth: 5       
+editor: visual
+execute: 
+   warning: false
+   message: false
+   echo: true
+---
+
+# Visualizing and Maintaining the Green Canopy of NYC
+
+New York City’s vast green canopy plays a crucial role in supporting the city’s environmental resilience, yet it often goes unnoticed amid the dense urban landscape. This project explores the structure, distribution, and condition of NYC’s trees through a combination of *spatial data acquisition, geospatial analysis, and visualization*. By integrating district shapefiles with more than one million tree observations from NYC Open Data, we gain insight into how different council districts vary in tree coverage and species diversity. These analyses allow us to identify which areas benefit from strong urban forestry management and which may require targeted interventions. Ultimately, this project demonstrates how data-driven mapping can help maintain, protect, and celebrate the natural elements that shape New York City’s neighborhoods.
+
+## Task 1 : Data Acquisition
+
+First, we must load in our packages.
+
+```{r, results='hide'}
+#| code-summary: Loading the packages...
+library(sf)
+library(tidyverse)
+library(httr2)
+
+library(DT)
+library(dplyr)
+```
+
+Next, we load in our shape file to create the maps for later.
+
+```{r, results='hide'}
+#| code-fold: true
+#| code-summary: Using st_read to transform the shape file...
+
+shapefile_path <- "data/mp03/nycc_25c/nycc.shp"
+
+shape <- st_read(shapefile_path)
+
+# Returning the transformed results.
+st_transform(shape, crs="WGS84")
+```
+
+## Task 2 : Downloading Tree Points
+
+In this section, we are grabbing the dataset from City of New York. Since there are over 1 million rows of data, we have to put it into a loop using \$offset and \$limit to page through the entire dataset so that we can use it entirely.
+
+Here is the function I made to download and combine all the datasets. Note I did not have to keep calling this function everytime I rendered the code because I saved the complete geoJSON data file ("data_all") to the data/mp03 folder.
+
+```{r, eval=FALSE}
+#| code-summary: Using the function made to go through the GeoJSON URL...
+# options(scipen = 999) to get rid of scientific notation
+
+# Function to read and save NYC Open Data GeoJSON in chunks
+read_nyc_data <- function(base_url,
+                          chunk_size = 10000,
+                          pause = 0.5,
+                          save_path = "data/mp03/nycdata",
+                          combine = TRUE) {
+  options(scipen = 999)
+  
+  # Create folder to save chunks
+  if (!dir.exists(save_path)) {
+    dir.create(save_path)
+  }
+  
+  data_list <- list()
+  offset <- 0
+  chunk <- 1
+  
+  repeat { #repeat function so we can keep paging through every 10,000 rows
+    url <- paste0(base_url, "?$limit=", chunk_size, "&$offset=", offset)
+    message(sprintf("Reading chunk %d (offset=%d)", chunk, offset))
+    
+    temp <- tryCatch({
+      st_read(url, quiet = TRUE) #st_read
+    }, error = function(e) {
+      message("Error at offset ", offset, ": ", e$message)
+      NULL
+    })
+    
+    # Stop if no data returned, this will end the loop
+    if (is.null(temp) || nrow(temp) == 0) {
+      message("No more data. Finished reading all chunks.")
+      break
+    }
+    
+    # Save chunk locally
+    file_path <- file.path(save_path, paste0("chunk_", chunk, ".geojson"))
+    st_write(temp, file_path, quiet = TRUE)
+    message("Saved ", nrow(temp), " rows to ", file_path)
+    
+    # Optionally store in memory for combining
+    if (combine) {
+      data_list[[chunk]] <- temp
+    }
+    
+    offset <- offset + chunk_size
+    chunk <- chunk + 1
+    
+    Sys.sleep(pause) # Allows the system to take a break so we aren't overworking it.
+  }
+  
+  # Combining it all into one variable data_all
+  
+  if (combine && length(data_list) > 0) {
+    data_all <- do.call(rbind, data_list) #bind rows
+    message("Combined ", length(data_list), " chunks with ",
+            nrow(data_all), " total rows.")
+    return(data_all)
+  } else {
+    message("All chunks saved in folder: ", save_path) # saving each chunk separately
+    return(invisible(NULL))
+  }
+}
+
+#Using the function we made
+data_all <- read_nyc_data(
+  base_url = "https://data.cityofnewyork.us/resource/hn5i-inap.geojson",
+  chunk_size = 10000,
+  pause = 0.5,
+  save_path = "data/mp03/nycdata",
+  combine = TRUE
+)
+
+```
+
+Since I saved the sets of data into chunks (10,000 each), I combined these folders into one big dataset.
+
+```{r,eval=FALSE}
+#| code-summary: Reading and combining the files from the folders. 
+
+# Read and combine all GeoJSON files
+geojson_files <- list.files("data/mp03/nycdata", pattern = "\\.geojson$", full.names = TRUE)
+data_all <- do.call(rbind, lapply(geojson_files, st_read))
+
+# Write the combined sf object to a new GeoJSON file
+st_write(data_all, "data/mp03/nycdata/data_all.geojson", driver = "GeoJSON")
+
+```
+
+```{r, results='hide'}
+#| code-summary: Reading the dataset...
+data_all <- st_read("data/mp03/nycdata/data_all.geojson")
+```
+
+## Task 3 : Data Integration & Exploration - Mapping NYC Trees
+
+```{r}
+#| code-summary: Mapping with ggplot...
+
+library(ggplot2)
+
+map <- ggplot() +
+  geom_sf(data = shape, fill = "gray90", color = "black") +   # polygon
+  geom_sf(data = data_all, color = "lightgreen", size = 0.2, alpha = 0.1)  # point
+
+map
+```
+
+
+## Task 4: District-Level Analyses of Tree Coverage
+
+Joining the two datasets (shapefile and NYC Open Data of trees)...
+
+```{r}
+#| code-summary: Joining...
+
+#joining using st_join and st_intersects
+
+joined_shape_and_data <- st_join(st_transform(data_all, crs="WGS84"), st_transform(shape, crs="WGS84"), join = st_intersects)
+
+```
+
+[1. Which council district has the most trees?]{style="color:#F76A6A;"}
+
+```{r}
+library(dplyr)
+library(tidycensus)
+format_titles <- function(df){
+    colnames(df) <- str_replace_all(colnames(df), "_", " ") |> str_to_title()
+    df
+}
+
+joined_shape_and_data |>
+  group_by(CounDist) |>
+  summarize(sum_of_trees = n()) |>
+  #arrange(desc(sum_of_trees)) |>
+  slice_max(sum_of_trees,n=1) |>
+  select(-geometry) |>
+  format_titles() |>
+    datatable(options=list(searching=FALSE, info=FALSE))
+
+```
+
+**Council District 51** has the most trees, with 70,927 trees.
+
+[2. Which council district has the highest density of trees? The Shape_Area column from the district shape file will be helpful here.]{style="color:#F76A6A;"}
+
+```{r}
+
+joined_shape_and_data |>
+  group_by(CounDist) |>
+  summarize(sum_of_trees = n(),
+            Shape_Area = first(Shape_Area)) |>
+  mutate(density_of_trees = sum_of_trees / Shape_Area) |>
+  #arrange(desc(density_of_trees)) |>
+  slice_max(density_of_trees,n=1) |>
+  select(-geometry) |>
+  format_titles() |>
+    datatable(options=list(searching=FALSE, info=FALSE))
+
+
+```
+
+**Council District 7** has the highest density of trees with 0.00281538.
+
+[3. Which district has highest fraction of dead trees out of all trees?]{style="color:#F76A6A;"}
+
+```{r}
+joined_shape_and_data |>
+  group_by(CounDist) |>
+  summarize(
+    sum_of_trees = n(),
+    dead_trees = sum(tpcondition == "Dead", na.rm = TRUE)
+  ) |>
+  mutate(fraction_of_dead_trees = dead_trees / sum_of_trees) |>
+  #arrange(desc(fraction_of_dead_trees)) |>
+  slice_max(fraction_of_dead_trees,n=1) |>
+  select(-geometry) |>
+  format_titles() |>
+    datatable(options=list(searching=FALSE, info=FALSE))
+
+```
+
+**Council District 32** has the highest fraction of dead trees, with 0.142229.
+
+[4. What is the most common tree species in Manhattan?]{style="color:#F76A6A;"}
+
+```{r}
+joined_shape_and_data |>
+  mutate(
+    borough = case_when(
+      CounDist >= 1  & CounDist <= 10 ~ "Manhattan",
+      CounDist >= 11 & CounDist <= 18 ~ "Bronx",
+      CounDist >= 19 & CounDist <= 32 ~ "Queens",
+      CounDist >= 33 & CounDist <= 48 ~ "Brooklyn",
+      CounDist >= 49 & CounDist <= 51 ~ "Staten Island",
+      TRUE ~ "Other")) |>
+  filter(borough == "Manhattan") |>
+  group_by(genusspecies) |>
+  summarize(number_of_species = n()) |>
+  #arrange(desc(number_of_species)) |>
+  slice_max(number_of_species, n=1) |>
+  format_titles() |>
+    datatable(options=list(searching=FALSE, info=FALSE))
+
+```
+
+Gleditsia triacanthos var. inermis - **Thornless honeylocust** is the most common tree species in Manhattan.
+
+[5. What is the species of the tree closest to Baruch’s campus?]{style="color:#F76A6A;"}
+
+```{r}
+
+# Baruch's coordinates : 42.0894, -75.9695
+new_st_point <- function(lat, lon){
+    # st_sfc expects x, y which flips the normal lat (N/S) + lon (W/E) ordering
+    st_sfc(point = st_point(c(lon, lat))) |>
+      st_set_crs("WGS84")
+}
+
+baruch <- new_st_point(42.0894,-75.9695)
+
+joined_shape_and_data |>
+  filter(genusspecies != "Unknown - Unknown") |> #filtering out unknown species
+  mutate(distance = as.numeric(st_distance(geometry, baruch)) )|>
+  slice_min(distance) |>
+  select(genusspecies, distance) |>
+  format_titles() |>
+    datatable(options=list(searching=FALSE, info=FALSE))
+  
+```
+
+The **Robinia pseudoacacia - black locust** is the closest to Baruch's campus.
+
+## Task 5 : NYC Parks Proposal
+
+![Weeping Willows in NYC Festival](docs/wheepingwillow.png){width="4in"}
+
+### Whispers of the Willows: A District 13 Weeping Willow Showcase
+
+Council District 13 contains the largest concentration of Salix babylonica (Weeping Willows) in New York City, creating some of the most serene and dramatic green spaces in the boroughs. To showcase this unique natural feature, the district will host **Whispers of the Willows,** a guided viewing event that invites residents to experience the elegance of the willow canopy through curated walking routes, scenic observation points, and small educational displays. The event aims to highlight the district’s distinctive tree identity while fostering local appreciation for the species’ ecological and cultural significance.
+
+District 13 contains 53 Weeping Willows, including 25 in good or excellent condition suitable for public viewing. The event will feature: 
+1. 3 willow-viewing routes showcasing 30 total trees, 
+2. 1 primary viewing area centered on the district’s largest willow group, and 
+3. 4 educational stops covering willow ecology, history, and flood-resilience benefits.
+
+
+```{r}
+
+cd13 <- shape |>
+  filter(CounDist==13)
+
+weeping_willow_cd13 <- joined_shape_and_data |>
+  filter(CounDist==13,
+         genusspecies == "Salix babylonica - Weeping willow")
+
+ggplot() +
+  geom_sf(data = cd13, fill = "gray90", color = "black") +
+  geom_sf(data = weeping_willow_cd13,  color = "forestgreen", alpha=0.3, size = 3) +
+  theme_minimal() +
+  ggtitle("Weeping Willows in Council District 13")
+```
+
+Council District 13 could be the perfect place for this event because it has the most amount of weeping willows (53) in all of the council districts of NYC. In Council District 51, there are 40 weeping willows, and 36 in council districts 6 and 19. Most council districts don't even have an amount of weeping willows in the double digits. In districts 14, 25, and 36, there exists only 1 weeping willow. 
+
+```{r}
+
+joined_shape_and_data |>
+  filter(genusspecies == "Salix babylonica - Weeping willow")|>
+  group_by(CounDist) |>
+  summarize(number_of_weeping_willow = n()) |>
+  arrange(desc(number_of_weeping_willow)) |>
+  format_titles() |>
+    datatable(options=list(searching=FALSE, info=FALSE))
+
+```
+
+There are a total of 31 trees in Good/Fair/Excellent Condition in Council District 13, as displayed in this visualization. 
+
+```{r}
+joined_shape_and_data |>
+  filter(genusspecies == "Salix babylonica - Weeping willow",
+         CounDist==13)|>
+  group_by(tpcondition) |>
+  summarize(number_of_weeping_willow = n()) |>
+  format_titles() |>
+    datatable(options=list(searching=FALSE, info=FALSE))
+```
+
+If not Council District 13, we can also attempt to have this festival along the southern coast of Council District 51 as a backup plan. Here is a map of Council District 51's Weeping Willow Trees:
+
+```{r}
+cd51 <- shape |>
+  filter(CounDist==51)
+
+weeping_willow_cd51 <- joined_shape_and_data |>
+  filter(CounDist==51,
+         genusspecies == "Salix babylonica - Weeping willow")
+
+ggplot() +
+  geom_sf(data = cd51, fill = "gray90", color = "black") +
+  geom_sf(data = weeping_willow_cd51,  color = "forestgreen", alpha=0.3, size = 3) +
+  theme_minimal() +
+  ggtitle("Weeping Willows in Council District 51")
+```
+
+# Final Thoughts
+
+Through district-level analyses and species-specific insights, this project reveals meaningful patterns in NYC’s urban forest, highlighting both strengths and areas for improvement across the city. By identifying which districts have the most trees, the highest densities, and the greatest proportion of dead or at-risk trees, we can better understand where maintenance efforts and resources should be prioritized. The deeper exploration into the distribution of specific species—such as the cluster of Weeping Willows in District 13—shows the value of examining tree data beyond simple counts. These findings not only inform practical urban forestry decisions but also create opportunities for community engagement through initiatives like the proposed **Whispers of the Willows** event. Together, the analyses underscore the importance of combining spatial data and creative planning to support a healthier, more vibrant urban canopy for all New Yorkers.
+
+### Key Takeaways
+
+* NYC’s tree distribution varies widely across council districts, with some areas flourishing in greenery while others show gaps that highlight the need for targeted maintenance.
+* Species-level patterns—like District 13’s surprising dominance of Weeping Willows—reveal how local environments shape the city’s botanical identity.
+* Integrating shapefiles with over a million tree observations demonstrates how spatial data can guide smarter urban planning, community events, and long-term canopy care.
